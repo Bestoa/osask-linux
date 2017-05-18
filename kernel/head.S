@@ -1,7 +1,8 @@
 ; TAB=4
-BOTPAK  EQU     0x00280000      ; C entry
-DSKCAC  EQU     0x00100000
-DSKCAC0 EQU     0x00008000
+CODE_BASE_ADDR      EQU     0x00280000
+CODE_START_ADDR     EQU     0x0000fe00
+DATA_BASE_ADDR      EQU     0x00000000
+DATA_START_ADDR     EQU     0x00007e00
 
 ; BOOT_INFO
 CYLS    EQU     0x0ff0          ; Read CYLS numbers from miniloader
@@ -11,7 +12,7 @@ SCRNX   EQU     0x0ff4
 SCRNY   EQU     0x0ff6
 VRAM    EQU     0x0ff8
 
-        ORG     0xc200
+        ORG     0xfe00
 
 start:
 
@@ -26,13 +27,14 @@ start:
 ;Save LEDS status
 
         MOV     AH,0x02
-        INT     0x16            ; keyboard BIOS
+        INT     0x16            ; Keyboard BIOS
         MOV     [LEDS],AL
 
 
+;PIC init
         MOV     AL,0xff
         OUT     0x21,AL
-        NOP
+        NOP                     ; Wait for a while
         OUT     0xa1,AL
 
         CLI
@@ -50,15 +52,16 @@ start:
 
 [CPU 486]
 
+;Enter protective mode
         LGDT    [GDTR0]         ; Load GDT
         MOV     EAX,CR0
         AND     EAX,0x7fffffff  ; Disable page
         OR      EAX,0x00000001  ; Enter projective mode
         MOV     CR0,EAX
-        JMP     pipelineflush
+        JMP     pipelineflush   ; Just flush pipeline
 
 pipelineflush:
-        MOV     AX,1*8          ;
+        MOV     AX,1*8          ; Use GDT1
         MOV     DS,AX
         MOV     ES,AX
         MOV     FS,AX
@@ -66,14 +69,27 @@ pipelineflush:
         MOV     SS,AX
 
 
+; .text(0xfe00) after .data(0x7e00)
+        MOV     ESI,main+(CODE_START_ADDR-DATA_START_ADDR)
+        MOV     EDI,CODE_BASE_ADDR+CODE_START_ADDR
+; .text seg limit is 512k(0x7ffff)
+        MOV     ECX,(512*1024-CODE_START_ADDR)
+        SHR     ECX,2
+        CALL    memcpy
+; .data seg start from begin
         MOV     ESI,main
-        MOV     EDI,BOTPAK
-        MOV     ECX,512*1024/4
+        MOV     EDI,DATA_BASE_ADDR+DATA_START_ADDR
+; .data size should less then 32k (0xfe00-0x7e00)
+        MOV     ECX,start - (DATA_BASE_ADDR + DATA_START_ADDR)
+        SHR     ECX,2
         CALL    memcpy
 
-        MOV     ESP, BOTPAK
-        JMP     DWORD 2*8:0x0
+        MOV     ESP, CODE_BASE_ADDR
+        JMP     DWORD 2*8:CODE_START_ADDR
+; Should never go here
+dead:
         HLT
+        JMP dead
 
 waitkbdout:
         IN      AL,0x64
@@ -93,7 +109,9 @@ memcpy:
         ALIGNB  16
 GDT0:
         DW      0x0000,0x0000,0x0000,0x0000
+        ; seg_base = 0 seg_limit = 0XFFFFF for data
         DW      0xffff,0x0000,0x9200,0x00cf
+        ; seg_base = 0X280000 seg_limit = 0X7FFFF for code
         DW      0xffff,0x0000,0x9a28,0x0047
 
         DW      0

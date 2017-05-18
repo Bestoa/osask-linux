@@ -35,11 +35,11 @@ entry:
 
 
 ; Read form disk
-        MOV     AX,0x0800       ; 0x800*0x10 = 0x8000
+        MOV     AX,0x0BA0
         MOV     ES,AX
         MOV     CH,0
         MOV     DH,0
-        MOV     CL,2            ; Read form sector 2
+        MOV     CL,1            ; Read form sector 1
 readloop:
         MOV     SI,0
 retry:
@@ -51,7 +51,7 @@ retry:
         JNC     next            ; Read 1 sector successfully
         ADD     SI,1
         CMP     SI,5
-        JAE     error           ; Retry 5 times
+        JAE     errormsg        ; Retry 5 times
         MOV     AH,0x00         ; Reset
         MOV     DL,0x00
         INT     0x13
@@ -70,12 +70,14 @@ next:
         MOV     DH,0
         ADD     CH,1
         CMP     CH,CYLS
-        JB      readloop        ; Just read 10 clys: (10*18)*2-1 sectors 179.5K
+        JB      readloop        ; Read 30 clys: 30*18*2 sectors 540K
+                                ; This is enough, 540K > 17K(0x4400) + 512K(code seg limit)
+                                ; 540K + 0xBA00 < 0xA0000(VGA start)
 
         MOV     [0x0ff0],CH
-        JMP     0xc200          ; File locates on 0x4400, so 0x8000+0x4400-0x200 = 0xc200
+        JMP     0xFE00          ; File locates on 0x4400, so 0xBA00+0x4400 = 0xFE00
 
-error:
+errormsg:
         MOV     SI,msg
 putloop:
         MOV     AL,[SI]
