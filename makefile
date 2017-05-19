@@ -1,25 +1,31 @@
 default: os
 	@echo done
 
-miniloader: miniloader.S
+ml.bin: miniloader.S
 	nasm miniloader.S -o ml.bin
 
-core:
-	cd kernel;make clean;make
+.PHONY: kernel
+kernel:
+	cd kernel;make
 
-os: miniloader core 
+image-org.img:
 	# Just support 1.44MB floppy
-	dd if=/dev/zero of=os.img bs=1K count=1440
+	dd if=/dev/zero of=image-org.img bs=1K count=1440
 	# FAT12
-	sudo mkfs.fat os.img
+	sudo mkfs.fat image-org.img
+
+.PHONY: os
+os: image-org.img ml.bin kernel
+	cp image-org.img os.img
 	dd if=ml.bin of=os.img conv=notrunc
 	sudo mount os.img tmp
-	sudo cp kernel/kernel.bin tmp
+	-sudo cp kernel/kernel.bin tmp
+	# Do umount
 	sudo umount tmp
 
 clean:
 	cd kernel;make clean
-	rm -f os.img ml.bin
+	rm -f *.img *.bin
 
 run: os
 	bochs -f bxrc

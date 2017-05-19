@@ -109,9 +109,9 @@ memcpy:
         ALIGNB  16
 GDT0:
         DW      0x0000,0x0000,0x0000,0x0000
-        ; seg_base = 0 seg_limit = 0XFFFFF for data
+        ; seg_base = 0 seg_limit = 0XFFFFF for data G bit =1
         DW      0xffff,0x0000,0x9200,0x00cf
-        ; seg_base = 0X280000 seg_limit = 0X7FFFF for code
+        ; seg_base = 0X280000 seg_limit = 0X7FFFF for code G bit =0
         DW      0xffff,0x0000,0x9a28,0x0047
 
         DW      0
