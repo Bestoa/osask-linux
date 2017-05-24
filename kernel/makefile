@@ -1,5 +1,6 @@
-c-src = init.c
+c-src = init.c graphic.c dsctbl.c int.c
 c-obj = $(c-src:%.c=%.o)
+header-file = $(shell ls *.h)
 
 .PHONY: all
 all: kernel-head.bin kernel-init.bin
@@ -9,7 +10,7 @@ all: kernel-head.bin kernel-init.bin
 kernel-head.bin: head.S
 	nasm head.S -o kernel-head.bin
 
-%.o: %.c
+%.o: %.c $(header-file)
 	gcc -c -m32 $< -o $@
 
 kernel-init.bin: asmlib clib font $(c-obj)
