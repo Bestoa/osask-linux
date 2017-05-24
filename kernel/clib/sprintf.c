@@ -16,7 +16,7 @@ void strcpy(char *s1, char *s2)
 #endif
     while(*s1++ = *s2++);
 }
-void write_int(char **buffer, int value)
+void write_int(char **buffer, int value, int base)
 {
     char stack[20] = {0};
     char i = 0;
@@ -33,8 +33,8 @@ void write_int(char **buffer, int value)
     }
     do
     {
-        stack[i] = number[(value%10)];
-        value /= 10;
+        stack[i] = number[(value%base)];
+        value /= base;
         i++;
     }while(value);
 
@@ -66,9 +66,13 @@ int sprintf(char* buffer,const char* format,...)
         i++;
         switch(format[i])
         {
+            case 'x':
+                temp = va_arg(arg_ptr, int);
+                write_int(&buffer, temp, 16);
+                break;
             case 'd':
                 temp = va_arg(arg_ptr, int);
-                write_int(&buffer, temp);
+                write_int(&buffer, temp, 10);
                 break;
             case 's':
                 stemp = (char *)va_arg(arg_ptr, char *);

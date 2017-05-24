@@ -1,4 +1,6 @@
-c-src = init.c graphic.c dsctbl.c int.c
+c-src = init.c
+c-src += $(shell ls *.c|grep -v init.c|xargs)
+
 c-obj = $(c-src:%.c=%.o)
 header-file = $(shell ls *.h)
 
