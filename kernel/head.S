@@ -33,11 +33,11 @@ start:
 
 ;PIC init
         MOV     AL,0xff
-        OUT     0x21,AL
+        OUT     0x21,AL         ; Disable PIC master interrupt
         NOP                     ; Wait for a while
-        OUT     0xa1,AL
+        OUT     0xa1,AL         ; Disable PIC slave interrupt
 
-        CLI
+        CLI                     ; Disable cpu interrupt
 
 ;Enable A20 gate
 
@@ -45,9 +45,9 @@ start:
         MOV     AL,0xd1
         OUT     0x64,AL
         CALL    waitkbdout
-        MOV     AL,0xdf
+        MOV     AL,0xdf         ; Enable A20
         OUT     0x60,AL
-        CALL    waitkbdout
+        CALL    waitkbdout      ; Useless
 
 
 [CPU 486]

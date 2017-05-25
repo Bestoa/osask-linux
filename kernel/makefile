@@ -4,20 +4,25 @@ c-src += $(shell ls *.c|grep -v init.c|xargs)
 c-obj = $(c-src:%.c=%.o)
 header-file = $(shell ls *.h)
 
-.PHONY: all
-all: kernel-head.bin kernel-init.bin
-	cp kernel-head.bin kernel.bin
-	cat kernel-init.bin >> kernel.bin
+kernel-head-target = kernel-head.bin
+kernel-tail-elf-target = kernel-tail.elf
+kernel-tail-target = kernel-tail.bin
+kernel-target = kernel.bin
 
-kernel-head.bin: head.S
-	nasm head.S -o kernel-head.bin
+.PHONY: all
+all: $(kernel-head-target) $(kernel-tail-target)
+	cp $(kernel-head-target) $(kernel-target)
+	cat $(kernel-tail-target) >> $(kernel-target)
+
+$(kernel-head-target): head.S
+	nasm head.S -o $(kernel-head-target)
 
 %.o: %.c $(header-file)
 	gcc -c -m32 $< -o $@
 
-kernel-init.bin: asmlib clib font $(c-obj)
-	ld -T kernel.ld $(c-obj) asmlib/*.o clib/*.o -o kernel-init.elf
-	objcopy -S -O binary kernel-init.elf kernel-init.bin
+$(kernel-tail-target): asmlib clib font $(c-obj)
+	ld -T kernel.ld $(c-obj) asmlib/*.o clib/*.o -o $(kernel-tail-elf-target)
+	objcopy -S -O binary $(kernel-tail-elf-target) $(kernel-tail-target)
 
 .PHONY: font
 font:

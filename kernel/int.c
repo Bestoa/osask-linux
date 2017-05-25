@@ -6,7 +6,9 @@
 
 void init_pic(void)
 {
+    /* Disable PIC master interrupt */
     io_out8(PIC0_IMR,  0xff  );
+    /* Disable PIC slave interrupt */
     io_out8(PIC1_IMR,  0xff  );
 
     io_out8(PIC0_ICW1, 0x11  );
