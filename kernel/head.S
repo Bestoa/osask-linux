@@ -1,8 +1,6 @@
 ; TAB=4
 CODE_BASE_ADDR      EQU     0x00280000
-CODE_START_ADDR     EQU     0x0000fe00
-DATA_BASE_ADDR      EQU     0x00000000
-DATA_START_ADDR     EQU     0x00007e00
+STACK_TOP           EQU     0x00400000
 
 ; BOOT_INFO
 CYLS    EQU     0x0ff0          ; Read CYLS numbers from miniloader
@@ -15,10 +13,10 @@ VRAM    EQU     0x0ff8
         ORG     0xfe00
 
 start:
-
         MOV     AL,0x13         ; VGA 320*200*8 bit
         MOV     AH,0x00
         INT     0x10
+
         MOV     BYTE [VMODE],8
         MOV     WORD [SCRNX],320
         MOV     WORD [SCRNY],200
@@ -69,23 +67,17 @@ pipelineflush:
         MOV     SS,AX
 
 
-; .text(0xfe00) after .data(0x7e00)
-        MOV     ESI,main+(CODE_START_ADDR-DATA_START_ADDR)
-        MOV     EDI,CODE_BASE_ADDR+CODE_START_ADDR
-; .text seg limit is 512k(0x7ffff)
-        MOV     ECX,(512*1024-CODE_START_ADDR)
-        SHR     ECX,2
-        CALL    memcpy
-; .data seg start from begin
+
+; Move .text and .data .rodata to CODE_BASE_ADDR
         MOV     ESI,main
-        MOV     EDI,DATA_BASE_ADDR+DATA_START_ADDR
-; .data size should less then 32k (0xfe00-0x7e00)
-        MOV     ECX,start - (DATA_BASE_ADDR + DATA_START_ADDR)
+        MOV     EDI,CODE_BASE_ADDR
+; .text seg limit is 512K(0x7ffff)
+        MOV     ECX,(512*1024)
         SHR     ECX,2
         CALL    memcpy
 
-        MOV     ESP, CODE_BASE_ADDR
-        JMP     DWORD 2*8:CODE_START_ADDR
+        MOV     ESP, STACK_TOP
+        JMP     DWORD 2*8:0
 ; Should never go here
 dead:
         HLT

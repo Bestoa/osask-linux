@@ -3,15 +3,17 @@ OUTPUT_ARCH(i386)
 
 SECTIONS
 {
-	/* Link the kernel at this address: "." means the current address */
-	/* C code start at 0xfe00(base 0x280000) data(include rodata) at 0x7e00(base 0x0) size 32K */
-	. = 0xfe00;
-	.text :  {
-		*(.text)
-	}
-	. = 0x7e00;
-	.data : {
-		*(.data)
+    /* .text start at 0x0 (Code base address is 0x280000), it will be loaded at 0x280000 */
+    .text : {
+        *(.text)
+    }
+    /* .data will be store after .text, but will be loaded with .text toghter to 0x280000 + .data's offset.
+     * The VMA of .data should be 0x280000 + .data's offset, the LMA of .data should be 0 + data's offset.
+     * The offset of .data should be .text's base + .text's size, but there will be some other small sections
+     * between .data and .text, so we add 2K to put them */
+    .data 0x280000+ADDR(.text)+SIZEOF(.text)+2*1024 : AT(LOADADDR(.text)+SIZEOF(.text)+2*1024) {
+        *(.data)
+        /* We just put .data and .rodata together */
         *(.rodata)
-	}
+    }
 }

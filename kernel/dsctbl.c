@@ -3,10 +3,8 @@
 
 void init_gdtidt(void)
 {
-    /* 7e00-fe00 for kernel data, 200000-210000 for GDT 1ff800-200000 for IDT */
-    /* SP from 280000->210000  448K should be enough */
-    struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) 0x00200000;
-    struct GATE_DESCRIPTOR    *idt = (struct GATE_DESCRIPTOR    *) 0x001ff800;
+    struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) 0x00270000;
+    struct GATE_DESCRIPTOR    *idt = (struct GATE_DESCRIPTOR    *) 0x0026f800;
     int i;
 
     for (i = 0; i < 8192; i++) {
@@ -15,12 +13,12 @@ void init_gdtidt(void)
     /* Same as head.S */
     set_segmdesc(gdt + 1, 0xffffffff, 0x00000000, 0x4092);
     set_segmdesc(gdt + 2, 0x0007ffff, 0x00280000, 0x409a);
-    load_gdtr(0xffff, 0x00200000);
+    load_gdtr(0xffff, 0x00270000);
 
     for (i = 0; i < 256; i++) {
         set_gatedesc(idt + i, 0, 0, 0);
     }
-    load_idtr(0x7ff, 0x001ff800);
+    load_idtr(0x7ff, 0x0026f800);
     set_gatedesc(idt + 0x21, (int) asm_inthandler21, 2 * 8, AR_INTGATE32);
     set_gatedesc(idt + 0x27, (int) asm_inthandler27, 2 * 8, AR_INTGATE32);
     set_gatedesc(idt + 0x2c, (int) asm_inthandler2c, 2 * 8, AR_INTGATE32);
