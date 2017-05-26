@@ -6,34 +6,21 @@
 #include "fifo.h"
 #include "keyboard.h"
 #include "mouse.h"
+#include "memory.h"
+#include "sheet.h"
 
-
-#define MEMMAN_FREES        4090
-#define MEMMAN_ADDR         0x003c0000
-
-struct FREEINFO {
-    unsigned int addr, size;
-};
-
-struct MEMMAN {
-    int frees, maxfrees, lostsize, losts;
-    struct FREEINFO free[MEMMAN_FREES];
-};
-
-unsigned int memtest(unsigned int start, unsigned int end);
-void memman_init(struct MEMMAN *man);
-unsigned int memman_total(struct MEMMAN *man);
-unsigned int memman_alloc(struct MEMMAN *man, unsigned int size);
-int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size);
 /* THIS MUST BE THE FIRST FUNCTION */
 void _start(void)
 {
     struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-    char s[40], mcursor[256], keybuf[32], mousebuf[128];
+    char s[40], keybuf[32], mousebuf[128];
     int mx, my, i;
     unsigned int memtotal;
     struct MOUSE_DEC mdec;
     struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
+    struct SHTCTL *shtctl;
+    struct SHEET *sht_back, *sht_mouse;
+    unsigned char *buf_back, buf_mouse[256];
 
     init_gdtidt();
     init_pic();
@@ -45,23 +32,36 @@ void _start(void)
 
     init_keyboard();
     enable_mouse(&mdec);
-    memtotal = memtest(0x00400000, 0xbfffffff);
+    memtotal = memtest(0x00400000, 0xbfffffff); /* 4M-3G */
     memman_init(memman);
+    /* 0xa0000 - 0xffff for bios */
     memman_free(memman, 0x00001000, 0x0009e000); /* 0x00001000 - 0x0009efff */
     memman_free(memman, 0x00400000, memtotal - 0x00400000);
 
     init_palette();
-    init_screen8(binfo->vram, binfo->scrnx, binfo->scrny);
+    shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
+    sht_back  = sheet_alloc(shtctl);
+    sht_mouse = sheet_alloc(shtctl);
+    /* backgroud fb buffer */
+    buf_back  = (unsigned char *) memman_alloc_4k(memman, binfo->scrnx * binfo->scrny);
+    sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny, -1);
+    sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99);
+    init_screen8(buf_back, binfo->scrnx, binfo->scrny);
+    /* The backgroud color must be the same as layer's col_inv */
+    init_mouse_cursor8(buf_mouse, 99);
+    sheet_slide(shtctl, sht_back, 0, 0);
     mx = (binfo->scrnx - 16) / 2;
     my = (binfo->scrny - 28 - 16) / 2;
-    init_mouse_cursor8(mcursor, COL8_008484);
-    putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16);
+    sheet_slide(shtctl, sht_mouse, mx, my);
+    /* backgroud fb buffer should always be 0 */
+    sheet_updown(shtctl, sht_back,  0);
+    sheet_updown(shtctl, sht_mouse, 1);
     sprintf(s, "(%d, %d)", mx, my);
-    putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
-
+    putfonts8_asc(buf_back, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
     sprintf(s, "memory %dMB   free : %dKB",
             memtotal / (1024 * 1024), memman_total(memman) / 1024);
-    putfonts8_asc(binfo->vram, binfo->scrnx, 0, 32, COL8_FFFFFF, s);
+    putfonts8_asc(buf_back, binfo->scrnx, 0, 32, COL8_FFFFFF, s);
+    sheet_refresh(shtctl, sht_back, 0, 0, binfo->scrnx, 48);
 
     for (;;) {
         io_cli();
@@ -72,8 +72,8 @@ void _start(void)
                 i = fifo8_get(&keyfifo);
                 io_sti();
                 sprintf(s, "%x", i);
-                boxfill8(binfo->vram, binfo->scrnx, COL8_008484,  0, 16, 15, 31);
-                putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
+                boxfill8(buf_back, binfo->scrnx, COL8_008484,  0, 16, 15, 31);
+                putfonts8_asc(buf_back, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
             } else if (fifo8_status(&mousefifo) != 0) {
                 i = fifo8_get(&mousefifo);
                 io_sti();
@@ -88,9 +88,9 @@ void _start(void)
                     if ((mdec.btn & 0x04) != 0) {
                         s[2] = 'C';
                     }
-                    boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 32, 16, 32 + 15 * 8 - 1, 31);
-                    putfonts8_asc(binfo->vram, binfo->scrnx, 32, 16, COL8_FFFFFF, s);
-                    boxfill8(binfo->vram, binfo->scrnx, COL8_008484, mx, my, mx + 15, my + 15);
+                    boxfill8(buf_back, binfo->scrnx, COL8_008484, 32, 16, 32 + 15 * 8 - 1, 31);
+                    putfonts8_asc(buf_back, binfo->scrnx, 32, 16, COL8_FFFFFF, s);
+                    sheet_refresh(shtctl, sht_back, 32, 16, 32 + 15 * 8, 32);
                     mx += mdec.x;
                     my += mdec.y;
                     if (mx < 0) {
@@ -106,130 +106,12 @@ void _start(void)
                         my = binfo->scrny - 16;
                     }
                     sprintf(s, "(%d, %d)", mx, my);
-                    boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 0, 79, 15);
-                    putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
-                    putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16);
+                    boxfill8(buf_back, binfo->scrnx, COL8_008484, 0, 0, 79, 15);
+                    putfonts8_asc(buf_back, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
+                    sheet_refresh(shtctl, sht_back, 0, 0, 80, 16);
+                    sheet_slide(shtctl, sht_mouse, mx, my);
                 }
             }
         }
     }
-}
-#define EFLAGS_AC_BIT       0x00040000
-#define CR0_CACHE_DISABLE   0x60000000
-
-unsigned int memtest(unsigned int start, unsigned int end)
-{
-    char flg486 = 0;
-    unsigned int eflg, cr0, i;
-
-    eflg = io_load_eflags();
-    eflg |= EFLAGS_AC_BIT; /* AC-bit = 1 */
-    io_store_eflags(eflg);
-    eflg = io_load_eflags();
-    if ((eflg & EFLAGS_AC_BIT) != 0) {
-        flg486 = 1;
-    }
-    eflg &= ~EFLAGS_AC_BIT; /* AC-bit = 0 */
-    io_store_eflags(eflg);
-
-    if (flg486 != 0) {
-        cr0 = load_cr0();
-        cr0 |= CR0_CACHE_DISABLE;
-        store_cr0(cr0);
-    }
-
-    i = memtest_sub(start, end);
-
-    if (flg486 != 0) {
-        cr0 = load_cr0();
-        cr0 &= ~CR0_CACHE_DISABLE;
-        store_cr0(cr0);
-    }
-
-    return i;
-}
-void memman_init(struct MEMMAN *man)
-{
-    man->frees = 0;
-    man->maxfrees = 0;
-    man->lostsize = 0;
-    man->losts = 0;
-    return;
-}
-
-unsigned int memman_total(struct MEMMAN *man)
-{
-    unsigned int i, t = 0;
-    for (i = 0; i < man->frees; i++) {
-        t += man->free[i].size;
-    }
-    return t;
-}
-
-unsigned int memman_alloc(struct MEMMAN *man, unsigned int size)
-{
-    unsigned int i, a;
-    for (i = 0; i < man->frees; i++) {
-        if (man->free[i].size >= size) {
-            a = man->free[i].addr;
-            man->free[i].addr += size;
-            man->free[i].size -= size;
-            if (man->free[i].size == 0) {
-                man->frees--;
-                for (; i < man->frees; i++) {
-                    man->free[i] = man->free[i + 1];
-                }
-            }
-            return a;
-        }
-    }
-    return 0;
-}
-
-int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size)
-{
-    int i, j;
-    for (i = 0; i < man->frees; i++) {
-        if (man->free[i].addr > addr) {
-            break;
-        }
-    }
-    /* free[i - 1].addr < addr < free[i].addr */
-    if (i > 0) {
-        if (man->free[i - 1].addr + man->free[i - 1].size == addr) {
-            man->free[i - 1].size += size;
-            if (i < man->frees) {
-                if (addr + size == man->free[i].addr) {
-                    man->free[i - 1].size += man->free[i].size;
-                    man->frees--;
-                    for (; i < man->frees; i++) {
-                        man->free[i] = man->free[i + 1];
-                    }
-                }
-            }
-            return 0;
-        }
-    }
-    if (i < man->frees) {
-        if (addr + size == man->free[i].addr) {
-            man->free[i].addr = addr;
-            man->free[i].size += size;
-            return 0;
-        }
-    }
-    if (man->frees < MEMMAN_FREES) {
-        for (j = man->frees; j > i; j--) {
-            man->free[j] = man->free[j - 1];
-        }
-        man->frees++;
-        if (man->maxfrees < man->frees) {
-            man->maxfrees = man->frees;
-        }
-        man->free[i].addr = addr;
-        man->free[i].size = size;
-        return 0;
-    }
-    man->losts++;
-    man->lostsize += size;
-    return -1;
 }
