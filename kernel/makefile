@@ -3,38 +3,53 @@ c-src += $(shell find -not -path "*font*" -not -path "./init.c" -not -path "*tes
 
 c-obj = $(c-src:%.c=%.o)
 
+asm-src = $(shell find asmlib -name "*.S")
+asm-obj = $(asm-src:%.S=%.s.o)
+
 kernel-head-target = kernel-head.bin
 kernel-tail-elf-target = kernel-tail.elf
 kernel-tail-target = kernel-tail.bin
 kernel-target = kernel.bin
 
-CFLAGS= -c -m32 -fno-builtin
+CC = gcc
+AS = nasm
+LD = ld
+OBJCOPY = objcopy
+MAKE = make
 
-.PHONY: all
-all: $(kernel-head-target) $(kernel-tail-target)
-	cp $(kernel-head-target) $(kernel-target)
-	cat $(kernel-tail-target) >> $(kernel-target)
+CFLAGS = -c -m32 -fno-builtin
+
+$(kernel-target): $(kernel-head-target) $(kernel-tail-target)
+	@echo " 	[GENKERNEL]    $(kernel-target)"
+	@cp $(kernel-head-target) $(kernel-target)
+	@cat $(kernel-tail-target) >> $(kernel-target)
 
 $(kernel-head-target): head.S
-	nasm head.S -o $(kernel-head-target)
+	@echo " 	[AS]  	$<"
+	@$(AS) head.S -o $(kernel-head-target)
 
 %.o: %.c
-	gcc $(CFLAGS) $< -o $@
+	@echo " 	[CC]  	$<"
+	@$(CC) $(CFLAGS) $< -o $@
 
-$(kernel-tail-target): asmlib font $(c-obj)
-	ld -T kernel.ld $(c-obj) asmlib/*.o -o $(kernel-tail-elf-target)
-	objcopy -S -O binary $(kernel-tail-elf-target) $(kernel-tail-target)
+%.s.o: %.S
+	@echo " 	[AS]  	$<"
+	@$(AS) -f elf32 $< -o $@
 
-.PHONY: font
-font:
-	cd font;make
+$(kernel-tail-target): $(c-obj) $(asm-obj)
+	@echo " 	[LD]    $(c-obj) $(asm-obj)"
+	@$(LD) -T kernel.ld $(c-obj) $(asm-obj) -o $(kernel-tail-elf-target)
+	@echo " 	[OBJCOPY] $(kernel-tail-elf-target) -> $(kernel-tail-target)"
+	@$(OBJCOPY) -S -O binary $(kernel-tail-elf-target) $(kernel-tail-target)
 
-.PHONY: asmlib
-asmlib:
-	cd asmlib;make
+font-list = font/font8x16.h
+
+$(font-list):
+	@$(MAKE) -C font
+
+$(c-obj): $(font-list)
 
 .PHONY: clean
 clean:
-	rm -f *.bin *.elf $(c-obj)
-	cd font;make clean;cd ..
-	cd asmlib;make clean;cd ..
+	rm -f *.bin *.elf $(c-obj) $(asm-obj)
+	$(MAKE) -C font clean
