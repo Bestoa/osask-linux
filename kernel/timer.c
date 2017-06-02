@@ -78,7 +78,15 @@ void timer_settime(struct TIMER *timer, unsigned int timeout)
 void inthandler20(int *esp)
 {
     int i,j;
+#ifdef SLOWDOWN
+    static int count = 0;
+#endif
     io_out8(PIC0_OCW2, 0x60);
+#ifdef SLOWDOWN
+    if (count++ < SLOWDOWN)
+        return;
+    count = 0;
+#endif
     timerctl.count++;
     if (timerctl.next > timerctl.count) {
         return;
