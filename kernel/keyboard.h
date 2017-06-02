@@ -1,7 +1,7 @@
 #ifndef __KEYBOARD_H__
 #define __KEYBOARD_H__
 
-extern struct FIFO8 keyfifo;
+#include "fifo.h"
 
 #define PORT_KEYDAT             0x0060
 #define PORT_KEYSTA             0x0064
@@ -14,7 +14,7 @@ extern struct FIFO8 keyfifo;
 #define MOUSECMD_ENABLE         0xf4
 
 void inthandler21(int *esp);
-void init_keyboard(void);
+void init_keyboard(struct FIFO32 *fifo, int data0);
 void wait_KBC_sendready(void);
 
 #endif
