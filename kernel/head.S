@@ -1,6 +1,14 @@
 ; TAB=4
+[CPU 486]
+
 CODE_BASE_ADDR      EQU     0x00280000
 STACK_TOP           EQU     0x00400000
+
+VBEMODE             EQU     0x101
+;0x101 640*480*8
+;0x103 800*600*8
+;0x105 1024*768*8
+;0x107 1280*1024*8
 
 ; BOOT_INFO
 CYLS    EQU     0x0ff0          ; Read CYLS numbers from miniloader
@@ -12,9 +20,51 @@ VRAM    EQU     0x0ff8
 
         ORG     0xfe00
 
-start:
-        MOV     AL,0x13         ; VGA 320*200*8 bit
-        MOV     AH,0x00
+; Check VBE
+        MOV     AX,0x9000
+        MOV     ES,AX
+        MOV     DI,0
+        MOV     AX,0x4f00
+        INT     0x10
+        CMP     AX,0x004f
+        JNE     scrn320
+
+; Check VBE version
+        MOV     AX,[ES:DI+4]
+        CMP     AX,0x0200
+        JB      scrn320         ; if (AX < 0x0200) goto scrn320
+
+; Check whether support VBEMODE
+        MOV     CX,VBEMODE
+        MOV     AX,0x4f01
+        INT     0x10
+        CMP     AX,0x004f
+        JNE     scrn320
+
+        CMP     BYTE [ES:DI+0x19],8 ; Color bit
+        JNE     scrn320
+        CMP     BYTE [ES:DI+0x1b],4
+        JNE     scrn320
+        MOV     AX,[ES:DI+0x00]     ; Whether support direct mode
+        AND     AX,0x0080
+        JZ      scrn320
+
+        MOV     BX,VBEMODE+0x4000   ; This mode allows us to change buffer directly, otherwise we need call 05H to flip
+        MOV     AX,0x4f02
+        INT     0x10
+        MOV     BYTE [VMODE],8
+        MOV     AX,[ES:DI+0x12]     ; X
+        MOV     [SCRNX],AX
+        MOV     AX,[ES:DI+0x14]     ; Y
+        MOV     [SCRNY],AX
+        MOV     EAX,[ES:DI+0x28]    ; VRAM address
+        MOV     [VRAM],EAX
+        JMP     keystatus
+
+scrn320:
+
+        MOV     AL, 0x13
+        MOV     AH, 0x00
         INT     0x10
 
         MOV     BYTE [VMODE],8
@@ -23,7 +73,7 @@ start:
         MOV     DWORD [VRAM],0x000a0000
 
 ;Save LEDS status
-
+keystatus:
         MOV     AH,0x02
         INT     0x16            ; Keyboard BIOS
         MOV     [LEDS],AL
@@ -47,8 +97,6 @@ start:
         OUT     0x60,AL
         CALL    waitkbdout      ; Useless
 
-
-[CPU 486]
 
 ;Enter protective mode
         LGDT    [GDTR0]         ; Load GDT
