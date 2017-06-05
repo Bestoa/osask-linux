@@ -10,8 +10,8 @@ SECTIONS
     /* .data will be store after .text, but will be loaded with .text toghter to 0x280000 + .data's offset.
      * The VMA of .data should be 0x280000 + .data's offset, the LMA of .data should be 0 + data's offset.
      * The offset of .data should be .text's base + .text's size, but there will be some other small sections
-     * between .data and .text, so we add 2K to put them */
-    .data 0x280000+ADDR(.text)+SIZEOF(.text)+2*1024 : AT(LOADADDR(.text)+SIZEOF(.text)+2*1024) {
+     * between .data and .text, so we add 3K to put them */
+    .data 0x280000+ADDR(.text)+SIZEOF(.text)+3*1024 : AT(LOADADDR(.text)+SIZEOF(.text)+3*1024) {
         *(.data)
         /* We just put .data and .rodata together */
         *(.rodata)

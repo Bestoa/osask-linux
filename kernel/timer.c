@@ -2,6 +2,7 @@
 #include "timer.h"
 #include "int.h"
 #include "fifo.h"
+#include "mtask.h"
 
 #define PIT_CTRL    0x0043
 #define PIT_CNT0    0x0040
@@ -90,6 +91,7 @@ void timer_settime(struct TIMER *timer, unsigned int timeout)
 void inthandler20(int *esp)
 {
     struct TIMER *timer;
+    char ts = 0;
 #ifdef SLOWDOWN
     static int count = 0;
 #endif
@@ -111,10 +113,17 @@ void inthandler20(int *esp)
         }
         /* Rest timeout timer */
         timer->flags = TIMER_FLAGS_ALLOC;
-        fifo32_put(timer->fifo, timer->data);
+        if (timer != mt_timer) {
+            fifo32_put(timer->fifo, timer->data);
+        } else {
+            ts = 1;
+        }
         timer = timer->next;
     }
     timerctl.t0 = timer;
     timerctl.next = timer->timeout;
+    if (ts != 0) {
+        mt_taskswitch();
+    }
     return;
 }

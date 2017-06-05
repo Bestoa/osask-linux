@@ -20,6 +20,8 @@ void asm_inthandler27(void);
 void asm_inthandler2c(void);
 int load_cr0(void);
 void store_cr0(int cr0);
+void load_tr(int tr);
 unsigned int memtest_sub(unsigned int start, unsigned int end);
 unsigned int memtest(unsigned int start, unsigned int end);
+void farjmp(int eip, int cs);
 #endif
