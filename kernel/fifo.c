@@ -1,6 +1,7 @@
 #include "fifo.h"
+#include "mtask.h"
 
-void fifo32_init(struct FIFO32 *fifo, int size, int *buf)
+void fifo32_init(struct FIFO32 *fifo, int size, int *buf, struct TASK *task)
 {
     fifo->size = size;
     fifo->buf = buf;
@@ -8,6 +9,7 @@ void fifo32_init(struct FIFO32 *fifo, int size, int *buf)
     fifo->flags = 0;
     fifo->p = 0;
     fifo->q = 0;
+    fifo->task = task;
     return;
 }
 
@@ -23,6 +25,11 @@ int fifo32_put(struct FIFO32 *fifo, int data)
         fifo->p = 0;
     }
     fifo->free--;
+    if (fifo->task != 0) {
+        if (fifo->task->flags != 2) { /* Has task and not sleep task */
+            task_run(fifo->task, -1, 0);
+        }
+    }
     return 0;
 }
 
