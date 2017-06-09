@@ -79,12 +79,12 @@ void _start(void)
         task_b[i] = task_alloc();
         task_b[i]->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
         task_b[i]->tss.eip = (int) &task_b_main;
-        task_b[i]->tss.es = 1 * 8;
-        task_b[i]->tss.cs = 2 * 8;
-        task_b[i]->tss.ss = 1 * 8;
-        task_b[i]->tss.ds = 1 * 8;
-        task_b[i]->tss.fs = 1 * 8;
-        task_b[i]->tss.gs = 1 * 8;
+        task_b[i]->tss.es = DATA_SEG_SEL;
+        task_b[i]->tss.cs = CODE_SEG_SEL;
+        task_b[i]->tss.ss = DATA_SEG_SEL;
+        task_b[i]->tss.ds = DATA_SEG_SEL;
+        task_b[i]->tss.fs = DATA_SEG_SEL;
+        task_b[i]->tss.gs = DATA_SEG_SEL;
         *((int *) (task_b[i]->tss.esp + 4)) = (int) sht_win_b[i];
         task_run(task_b[i], 2, i + 1);
     }

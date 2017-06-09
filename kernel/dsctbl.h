@@ -11,6 +11,9 @@
 #define AR_TSS32        0x0089
 #define AR_INTGATE32    0x008e
 
+#define CODE_SEG_SEL    (2 * 8)
+#define DATA_SEG_SEL    (1 * 8)
+
 struct SEGMENT_DESCRIPTOR {
     short limit_low, base_low;
     char base_mid, access_right;

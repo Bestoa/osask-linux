@@ -125,7 +125,7 @@ pipelineflush:
         CALL    memcpy
 
         MOV     ESP, STACK_TOP
-        JMP     DWORD 2*8:0
+        JMP     DWORD 2*8:CODE_BASE_ADDR
 ; Should never go here
 dead:
         HLT
@@ -149,10 +149,10 @@ memcpy:
         ALIGNB  16
 GDT0:
         DW      0x0000,0x0000,0x0000,0x0000
-        ; seg_base = 0 seg_limit = 0XFFFFF for data G bit =1
+        ; seg_base = 0 seg_limit = 0XFFFFF for data G bit = 1
         DW      0xffff,0x0000,0x9200,0x00cf
-        ; seg_base = 0X280000 seg_limit = 0X7FFFF for code G bit =0
-        DW      0xffff,0x0000,0x9a28,0x0047
+        ; seg_base = 0 seg_limit = 0XFFFFF for code G bit = 1
+        DW      0xffff,0x0000,0x9a00,0x00cf
 
         DW      0
 GDTR0:
