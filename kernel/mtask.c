@@ -61,10 +61,16 @@ void task_switchsub(void)       /* Found next running task based on task level *
     return;
 }
 
+void task_idle(void) {
+    for (;;) {
+        io_hlt();
+    }
+}
+
 struct TASK *task_init(struct MEMMAN *memman) /* Create task control and current task(main thread) */
 {
     int i;
-    struct TASK *task;
+    struct TASK *task, *idle;
     struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADR_GDT;
     taskctl = (struct TASKCTL *) memman_alloc_4k(memman, sizeof (struct TASKCTL));
     for (i = 0; i < MAX_TASKS; i++) {
@@ -85,6 +91,19 @@ struct TASK *task_init(struct MEMMAN *memman) /* Create task control and current
     load_tr(task->sel);
     task_timer = timer_alloc();
     timer_settime(task_timer, task->priority);
+
+
+	idle = task_alloc();
+	idle->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024;
+	idle->tss.eip = (int) &task_idle;
+	idle->tss.es = DATA_SEG_SEL;
+	idle->tss.cs = CODE_SEG_SEL;
+	idle->tss.ss = DATA_SEG_SEL;
+	idle->tss.ds = DATA_SEG_SEL;
+	idle->tss.fs = DATA_SEG_SEL;
+	idle->tss.gs = DATA_SEG_SEL;
+	task_run(idle, MAX_TASKLEVELS - 1, 1);
+
     return task;
 }
 
