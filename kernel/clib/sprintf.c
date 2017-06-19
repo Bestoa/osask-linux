@@ -1,22 +1,7 @@
 #include <stdarg.h>
 #include "common.h"
-int strlen(char *s)
-{
-    int i = 0;
-#ifdef __TEST__
-    ENTER;
-#endif
-    while(s[i++]);
-    return i - 1;
-}
-void strcpy(char *s1, char *s2)
-{
-#ifdef __TEST__
-    ENTER;
-#endif
-    while(*s1++ = *s2++);
-}
-void write_int(char **buffer, int value, int base)
+#include "lib.h"
+static void write_int(char **buffer, int value, int base)
 {
     char stack[20] = {0};
     char i = 0;
@@ -45,7 +30,7 @@ void write_int(char **buffer, int value, int base)
     *buffer = temp;
 }
 
-int sprintf(char* buffer,const char* format,...)
+int sprintf(char* buffer,char* format,...)
 {
     va_list arg_ptr;
     int i = 0;

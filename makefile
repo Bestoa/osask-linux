@@ -38,6 +38,9 @@ $(target-image): $(empty-image) ml.bin $(kernel-target)
 	@-sudo mount $(target-image) mnt
 	@-echo " 	[COPY]  $(kernel-target)"
 	@-sudo cp $(kernel-target) mnt
+	@-sudo cp kernel/head.S mnt
+	@-sudo cp kernel/init.c mnt
+	@-sudo cp kernel/init.c mnt/1234567890asd.qwertyui
 	@-sudo umount mnt
 	@rm -r mnt
 

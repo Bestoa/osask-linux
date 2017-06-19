@@ -18,12 +18,6 @@
 #define COL8_008484     14
 #define COL8_848484     15
 
-struct BOOTINFO {
-    char cyls, leds, vmode, reserve;
-    short scrnx, scrny;
-    char *vram;
-};
-#define ADR_BOOTINFO (0xff0);
 
 void init_palette(void);
 void set_palette(int start, int end, unsigned char *rgb);

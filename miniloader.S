@@ -70,9 +70,7 @@ next:
         MOV     DH,0
         ADD     CH,1
         CMP     CH,CYLS
-        JB      readloop        ; Read 30 clys: 30*18*2 sectors 540K
-                                ; This is enough, 540K > 17K(0x4400) + 512K(code seg limit)
-                                ; 540K + 0xBA00 < 0xA0000(VGA start)
+        JB      readloop
 
         MOV     [0x0ff0],CH
         JMP     0xFE00          ; File locates on 0x4400, so 0xBA00+0x4400 = 0xFE00

@@ -114,12 +114,16 @@ pipelineflush:
         MOV     GS,AX
         MOV     SS,AX
 
-
+; Move floppy A data to 1M
+        MOV     ESI, 0xBA00
+        MOV     EDI, 0x100000
+        MOV     ECX, (10*18*2*512)
+        SHR     ECX,2
+        CALL    memcpy
 
 ; Move .text and .data .rodata to CODE_BASE_ADDR
         MOV     ESI,main
         MOV     EDI,CODE_BASE_ADDR
-; .text seg limit is 512K(0x7ffff)
         MOV     ECX,(512*1024)
         SHR     ECX,2
         CALL    memcpy
