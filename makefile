@@ -20,6 +20,11 @@ kernel:
 	@echo " 	[MAKE] 		$@"
 	@$(MAKE) -C kernel
 
+.PHONY: app
+app:
+	@echo " 	[MAKE] 		$@"
+	@$(MAKE) -C app
+
 $(kernel-target):
 	@echo " 	[MAKE] 		$@"
 	@$(MAKE) -C kernel
@@ -30,7 +35,7 @@ $(empty-image):
 	@echo " 	[MKFS.FAT]  $@"
 	@sudo mkfs.fat $@ > /dev/null
 
-$(target-image): $(empty-image) ml.bin $(kernel-target)
+$(target-image): $(empty-image) ml.bin $(kernel-target) app
 	@echo " 	[GENIMAGE] 	$@"
 	@cp $(empty-image) $(target-image)
 	@dd if=ml.bin of=$(target-image) conv=notrunc
@@ -40,12 +45,14 @@ $(target-image): $(empty-image) ml.bin $(kernel-target)
 	@-sudo cp $(kernel-target) mnt
 	@-sudo cp kernel/head.S mnt
 	@-sudo cp kernel/init.c mnt
-	@-sudo cp kernel/init.c mnt/1234567890asd.qwertyui
+	@-echo " 	[COPY]  APP"
+	@-sudo cp app/*.bin mnt
 	@-sudo umount mnt
 	@rm -r mnt
 
 clean:
 	@$(MAKE) -C kernel clean
+	@$(MAKE) -C app clean
 	rm -f *.img *.bin
 
 run:

@@ -3,5 +3,6 @@
 int sprintf(char *, char *, ...);
 int strlen(char *);
 int strcmp(char *, char *);
+int strncmp(char *, char *, int);
 void strcpy(char *, char *);
 #endif

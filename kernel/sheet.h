@@ -1,5 +1,6 @@
 #ifndef __SHEET_H__
 #define __SHEET_H__
+#include "memory.h"
 #define MAX_SHEETS		256
 struct SHEET {
 	unsigned char *buf;
