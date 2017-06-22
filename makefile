@@ -1,59 +1,65 @@
+bootloader-target = bootloader/ml.bin
 kernel-target = kernel/kernel.bin
 
 target-image = os.img
 empty-image = empty.img
 
-AS = nasm
+tmp-mount-point = mnt
+
 MAKE = make
+ECHO = echo
+DD = dd
+CP = cp
+RM = rm
+MAKEFAT = mkfs.fat
+MAKEDIR = mkdir
+MOUNT = mount
+UMOUNT = umount
+RUNASROOT = sudo
 
-default: kernel
-	@echo " 	[MAKE] 		$(target-image)"
-	@$(MAKE) $(target-image)
-	@echo done
+default: $(target-image)
 
-ml.bin: miniloader.S
-	@echo " 	[AS] 		$@"
-	@$(AS) $< -o $@
+.PHONY: bootloader
+bootloader:
+	@$(ECHO) " 	[MAKE] 		$@"
+	@$(MAKE) -C $@
 
 .PHONY: kernel
 kernel:
-	@echo " 	[MAKE] 		$@"
-	@$(MAKE) -C kernel
+	@$(ECHO) " 	[MAKE] 		$@"
+	@$(MAKE) -C $@
 
 .PHONY: app
 app:
-	@echo " 	[MAKE] 		$@"
-	@$(MAKE) -C app
-
-$(kernel-target):
-	@echo " 	[MAKE] 		$@"
-	@$(MAKE) -C kernel
+	@$(ECHO) " 	[MAKE] 		$@"
+	@$(MAKE) -C $@
 
 $(empty-image):
-	@echo " 	[GENIMAGE] 	$@"
-	@dd if=/dev/zero of=$@ bs=1K count=1440
-	@echo " 	[MKFS.FAT]  $@"
-	@sudo mkfs.fat $@ > /dev/null
+	@$(ECHO) " 	[GENIMAGE] 	$@"
+	@$(DD) if=/dev/zero of=$@ bs=1K count=1440
+	@$(ECHO) " 	[MKFS.FAT]  $@"
+	@$(RUNASROOT) $(MAKEFAT) $@ > /dev/null
 
-$(target-image): $(empty-image) ml.bin $(kernel-target) app
-	@echo " 	[GENIMAGE] 	$@"
-	@cp $(empty-image) $(target-image)
-	@dd if=ml.bin of=$(target-image) conv=notrunc
-	@mkdir -p mnt
-	@-sudo mount $(target-image) mnt
-	@-echo " 	[COPY]  $(kernel-target)"
-	@-sudo cp $(kernel-target) mnt
-	@-sudo cp kernel/head.S mnt
-	@-sudo cp kernel/init.c mnt
-	@-echo " 	[COPY]  APP"
-	@-sudo cp app/*.bin mnt
-	@-sudo umount mnt
-	@rm -r mnt
+$(target-image): $(empty-image) bootloader kernel app
+	@$(ECHO) " 	[GENIMAGE] 	$@"
+	@$(CP) $(empty-image) $(target-image)
+	@$(DD) if=$(bootloader-target) of=$(target-image) conv=notrunc
+	@$(MAKEDIR) -p $(tmp-mount-point)
+	@-$(RUNASROOT) $(MOUNT) $(target-image) $(tmp-mount-point)
+	@-$(ECHO) " 	[COPY]  $(kernel-target)"
+	@-$(RUNASROOT) $(CP) $(kernel-target) $(tmp-mount-point)
+	@-$(RUNASROOT) $(CP) kernel/head.S $(tmp-mount-point)
+	@-$(RUNASROOT) $(CP) kernel/init.c $(tmp-mount-point)
+	@-$(ECHO) " 	[COPY]  APP"
+	@-$(RUNASROOT) $(CP) app/*.bin $(tmp-mount-point)
+	@-$(RUNASROOT) $(UMOUNT) $(tmp-mount-point)
+	@$(RM) -r $(tmp-mount-point)
 
 clean:
+	@$(MAKE) -C bootloader clean
 	@$(MAKE) -C kernel clean
 	@$(MAKE) -C app clean
-	rm -f *.img *.bin
+	$(RM) -f *.img
 
 run:
 	@bochs -f bxrc
