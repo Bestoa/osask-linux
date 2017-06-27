@@ -11,11 +11,13 @@ GLOBAL  load_gdtr, load_idtr
 GLOBAL  load_tr
 GLOBAL  asm_inthandler20, asm_inthandler21
 GLOBAL  asm_inthandler27, asm_inthandler2c
+GLOBAL  asm_inthandler0d
 GLOBAL  memtest_sub
 GLOBAL  farjmp, farcall
-GLOBAL  asm_os_api
+GLOBAL  asm_os_api, start_app
 EXTERN  inthandler20, inthandler21
 EXTERN  inthandler27, inthandler2c
+EXTERN  inthandler0d
 EXTERN  os_api
 
 io_hlt:    ; void io_hlt(void);
@@ -106,20 +108,20 @@ load_tr:        ; void load_tr(int tr);
         RET
 
 asm_inthandler20:
-		PUSH	ES
-		PUSH	DS
-		PUSHAD
-		MOV		EAX,ESP
-		PUSH	EAX
-		MOV		AX,SS
-		MOV		DS,AX
-		MOV		ES,AX
-		CALL	inthandler20
-		POP		EAX
-		POPAD
-		POP		DS
-		POP		ES
-		IRETD
+        PUSH    ES
+        PUSH    DS
+        PUSHAD
+        MOV     EAX,ESP
+        PUSH    EAX
+        MOV     AX,SS
+        MOV     DS,AX
+        MOV     ES,AX
+        CALL    inthandler20
+        POP     EAX
+        POPAD
+        POP     DS
+        POP     ES
+        IRETD
 
 
 asm_inthandler21:
@@ -170,6 +172,26 @@ asm_inthandler2c:
         POP     ES
         IRETD
 
+asm_inthandler0d:
+        STI
+        PUSH    ES
+        PUSH    DS
+        PUSHAD
+        MOV     EAX,ESP
+        PUSH    EAX
+        MOV     AX,SS
+        MOV     DS,AX
+        MOV     ES,AX
+        CALL    inthandler0d
+        CMP     EAX,0
+        JNE     end_app
+        POP     EAX
+        POPAD
+        POP     DS
+        POP     ES
+        ADD     ESP,4
+        IRETD
+
 memtest_sub:   ; unsigned int memtest_sub(unsigned int start, unsigned int end)
         PUSH    EDI
         PUSH    ESI
@@ -203,9 +225,9 @@ mts_fin:
         POP     EDI
         RET
 
-farjmp:		; void farjmp(int eip, int cs).
-		JMP		FAR	[ESP+4]				; eip at ESP+4 cs at ESP + 8
-		RET
+farjmp:     ; void farjmp(int eip, int cs).
+        JMP     FAR [ESP+4]             ; eip at ESP+4 cs at ESP + 8
+        RET
 
 
 
@@ -215,9 +237,46 @@ farcall:                            ;void farcall(int eip, int cs);
 
 asm_os_api:
         STI
+        PUSH    DS
+        PUSH    ES
         PUSHAD
         PUSHAD
+        MOV     AX,SS
+        MOV     DS,AX
+        MOV     ES,AX
         CALL    os_api
-        ADD     ESP, 32
+        CMP     EAX,0
+        JNE     end_app
+        ADD     ESP,32
         POPAD
+        POP     ES
+        POP     DS
         IRETD
+
+end_app:
+        MOV     ESP,[EAX]
+        POPAD
+        RET
+
+
+
+start_app:      ; void start_app(int eip, int cs, int esp, int ds, int *tss_esp0);
+        PUSHAD
+        MOV     EAX,[ESP+36]
+        MOV     ECX,[ESP+40]
+        MOV     EDX,[ESP+44]
+        MOV     EBX,[ESP+48]
+        MOV     EBP,[ESP+52]
+        MOV     [EBP  ],ESP
+        MOV     [EBP+4],SS
+        MOV     ES,BX
+        MOV     DS,BX
+        MOV     FS,BX
+        MOV     GS,BX
+        OR      ECX,3
+        OR      EBX,3
+        PUSH    EBX
+        PUSH    EDX
+        PUSH    ECX
+        PUSH    EAX
+        RETF

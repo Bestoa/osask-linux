@@ -253,6 +253,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
     struct FILEINFO *finfo;
     struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADR_GDT;
     char name[18], *p;
+    struct TASK *task = task_now();
     int i;
 
     for (i = 0; i < 13; i++) {
@@ -274,11 +275,12 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
     }
 
     if (finfo != 0) {
-        p = (char *) memman_alloc_4k(memman, finfo->size);
+        p = (char *) memman_alloc_4k(memman, finfo->size + 64 * 1024); /* APP + 64K stack */
         *((int *) 0xfe8) = (int) p;
         file_loadfile(finfo->clustno, finfo->size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
-        set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER);
-        farcall(0, 1003 * 8);
+        set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER + 0x60);
+        set_segmdesc(gdt + 1004, finfo->size + 64 * 1024 - 1,   (int) p, AR_DATA32_RW + 0x60); /* DATA seg + stack */
+        start_app(0, 1003 * 8, finfo->size + 64 * 1024 - 1 /* stack top: ESP */, 1004 * 8, &(task->tss.esp0));
         memman_free_4k(memman, (int) p, finfo->size);
         cons_newline(cons);
         return 1;
@@ -286,9 +288,10 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
     return 0;
 }
 
-void os_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
+int *os_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
     int cs_base = *((int *) 0xfe8);
+    struct TASK *task = task_now();
     struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
     if (edx == 1) {
         cons_putchar(cons, eax & 0xff, 1);
@@ -296,6 +299,16 @@ void os_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int e
         cons_putstr0(cons, (char *) ebx + cs_base);
     } else if (edx == 3) {
         cons_putstr1(cons, (char *) ebx + cs_base, ecx);
+    } else if (edx == 4) {
+        return &(task->tss.esp0);
     }
-    return;
+    return 0;
+}
+
+int *inthandler0d(int *esp)
+{
+    struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
+    struct TASK *task = task_now();
+    cons_putstr0(cons, "\nINT 0D :\n General Protected Exception.\n");
+    return &(task->tss.esp0);
 }

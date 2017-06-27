@@ -14,6 +14,7 @@ int io_load_eflags(void);
 void io_store_eflags(int eflags);
 void load_gdtr(int limit, int addr);
 void load_idtr(int limit, int addr);
+void asm_inthandler0d(void);
 void asm_inthandler20(void);
 void asm_inthandler21(void);
 void asm_inthandler27(void);
@@ -26,4 +27,5 @@ unsigned int memtest(unsigned int start, unsigned int end);
 void farjmp(int eip, int cs);
 void farcall(int eip, int cs);
 void asm_os_api(void);
+void start_app(int eip, int cs, int esp, int ds, int *tss_esp0);
 #endif
