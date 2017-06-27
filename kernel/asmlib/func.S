@@ -12,9 +12,11 @@ GLOBAL  load_tr
 GLOBAL  asm_inthandler20, asm_inthandler21
 GLOBAL  asm_inthandler27, asm_inthandler2c
 GLOBAL  memtest_sub
-GLOBAL  farjmp
+GLOBAL  farjmp, farcall
+GLOBAL  asm_os_api
 EXTERN  inthandler20, inthandler21
 EXTERN  inthandler27, inthandler2c
+EXTERN  os_api
 
 io_hlt:    ; void io_hlt(void);
         HLT
@@ -204,3 +206,18 @@ mts_fin:
 farjmp:		; void farjmp(int eip, int cs).
 		JMP		FAR	[ESP+4]				; eip at ESP+4 cs at ESP + 8
 		RET
+
+
+
+farcall:                            ;void farcall(int eip, int cs);
+        CALL    FAR [ESP+4]         ; eip, cs
+        RET
+
+asm_os_api:
+        STI
+        PUSHAD
+        PUSHAD
+        CALL    os_api
+        ADD     ESP, 32
+        POPAD
+        IRETD

@@ -24,4 +24,6 @@ void load_tr(int tr);
 unsigned int memtest_sub(unsigned int start, unsigned int end);
 unsigned int memtest(unsigned int start, unsigned int end);
 void farjmp(int eip, int cs);
+void farcall(int eip, int cs);
+void asm_os_api(void);
 #endif

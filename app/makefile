@@ -5,9 +5,9 @@ AS = nasm
 
 %.bin: %.S
 	@echo " 	[AS]  	$<"
-	nasm $< -o $@
+	@nasm $< -o $@
 
-$(asm-bin):
+all: $(asm-bin)
 
 clean:
 	rm -rf *.bin
