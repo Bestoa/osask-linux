@@ -215,7 +215,7 @@ void cmd_dir(struct CONSOLE *cons)
         }
         if (finfo[i].name[0] != 0xe5) {
             if ((finfo[i].type & 0x18) == 0) {
-                sprintf(s, "filename.ext   %d\n\n", finfo[i].size);
+                sprintf(s, "filename.ext   %d\n", finfo[i].size);
                 for (j = 0; j < 8; j++) {
                     s[j] = finfo[i].name[j];
                 }
@@ -275,6 +275,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 
     if (finfo != 0) {
         p = (char *) memman_alloc_4k(memman, finfo->size);
+        *((int *) 0xfe8) = (int) p;
         file_loadfile(finfo->clustno, finfo->size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
         set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER);
         farcall(0, 1003 * 8);
@@ -287,13 +288,14 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 
 void os_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
+    int cs_base = *((int *) 0xfe8);
     struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
     if (edx == 1) {
         cons_putchar(cons, eax & 0xff, 1);
     } else if (edx == 2) {
-        cons_putstr0(cons, (char *) ebx);
+        cons_putstr0(cons, (char *) ebx + cs_base);
     } else if (edx == 3) {
-        cons_putstr1(cons, (char *) ebx, ecx);
+        cons_putstr1(cons, (char *) ebx + cs_base, ecx);
     }
     return;
 }
