@@ -18,6 +18,7 @@ OBJCOPY = objcopy
 MAKE = make
 
 CFLAGS = -c -m32 -fno-builtin
+CFLAGS += -Iinclude
 CFLAGS += -DSLOWDOWN=10
 
 $(kernel-target): $(kernel-head-target) $(kernel-tail-target)
