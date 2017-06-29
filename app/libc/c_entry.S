@@ -4,6 +4,9 @@ EXTERN main
 
 [SECTION .text]
 
+    DB "EXEC"
+    TIMES 0x20-($-$$) DB 0
+
 _start:
     PUSHAD
     CALL main

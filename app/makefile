@@ -1,7 +1,7 @@
 asm-src = $(shell ls *.S)
 asm-bin = $(asm-src:%.S=%.bin)
 
-sub-dir = $(shell find -not -path "." -type d)
+sub-dir = $(shell find -not -path "." -not -path "./libc" -not -path "./out" -type d)
 
 default: all
 
@@ -10,9 +10,16 @@ MAKE = make
 
 %.bin: %.S
 	@echo " 	[AS]  	$<"
-	@nasm $< -o $@
+	@nasm $< -o out/$@
 
-subdirs: $(sub-dir)
+out:
+	mkdir -p out
+
+.PHONY: libc
+libc:
+	make -C libc
+
+subdirs: out libc $(sub-dir)
 	for d in $(sub-dir); \
 	do $(MAKE) -C $$d || exit 1; \
 	done
@@ -22,7 +29,8 @@ cleansub:
 	do $(MAKE) -C $$d clean; \
 	done
 
-all: $(asm-bin) subdirs
+all: out $(asm-bin) subdirs
 
 clean: cleansub
-	rm -rf *.bin
+	make -C libc clean
+	rm -rf out

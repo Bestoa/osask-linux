@@ -1,7 +1,7 @@
-c-src = hello3.c
+c-src = hello4.c
 c-obj = $(c-src:%.c=%.o)
 
-target = hello3
+target = hello4
 target-elf = $(target).elf
 target-bin = $(target).bin
 

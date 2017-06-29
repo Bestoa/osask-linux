@@ -1,4 +1,7 @@
 [BITS 32]
+    DB      "EXEC"
+    DW      0x20
+    TIMES   0x20-($-$$) DB 0
     MOV     ECX, msg
     MOV     EDX, 1
 putloop:

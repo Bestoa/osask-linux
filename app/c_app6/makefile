@@ -1,7 +1,7 @@
-c-src = hello3.c
+c-src = winhello2.c
 c-obj = $(c-src:%.c=%.o)
 
-target = hello3
+target = whello2
 target-elf = $(target).elf
 target-bin = $(target).bin
 

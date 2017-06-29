@@ -49,9 +49,8 @@ $(target-image): $(empty-image) bootloader kernel app
 	@-$(ECHO) " 	[COPY]  $(kernel-target)"
 	@-$(RUNASROOT) $(CP) $(kernel-target) $(tmp-mount-point)
 	@-$(RUNASROOT) $(CP) kernel/head.S $(tmp-mount-point)
-	@-$(RUNASROOT) $(CP) kernel/init.c $(tmp-mount-point)
 	@-$(ECHO) " 	[COPY]  APP"
-	@-$(RUNASROOT) $(CP) -v app/*.bin $(tmp-mount-point)
+	@-$(RUNASROOT) $(CP) -v app/out/*.bin $(tmp-mount-point)
 	@-$(RUNASROOT) $(UMOUNT) $(tmp-mount-point)
 	@$(RM) -r $(tmp-mount-point)
 

@@ -8,6 +8,7 @@
 #include "window.h"
 #include "graphic.h"
 #include "dsctbl.h"
+#include "exec.h"
 #include "console.h"
 
 void console_task(struct SHEET *sheet, unsigned int memtotal)
@@ -274,13 +275,23 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
         finfo = file_search(name, (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
     }
 
-    if (finfo != 0) {
-        p = (char *) memman_alloc_4k(memman, finfo->size + 64 * 1024); /* APP + 64K stack */
-        *((int *) 0xfe8) = (int) p;
+    if (finfo != 0 && finfo->size > sizeof(struct exec_header)) {
+        struct exec_header header;
+        int data_size = finfo->size + 64 * 1024; /* Default data size = file size + 64K stack */
+        file_loadfile(finfo->clustno, sizeof(header), (char *)&header, fat, (char *) (ADR_DISKIMG + 0x003e00)); /* Load header */
+        if (strncmp(header.magic, "EXEC", 4) != 0) {
+            cons_putstr0(cons, "EXEC format error.\n");
+            return 1;
+        }
+        if (header.bss_len != 0) {
+            data_size = header.bss_start + header.bss_len + 64 * 1024; /* alloc BSS section, bss start may > file size */
+        }
+        p = (char *) memman_alloc_4k(memman, data_size);
+        *((int *) 0xfe8) = (int) p; /* CS BASE = DS BASE */
         file_loadfile(finfo->clustno, finfo->size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
-        set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER + 0x60);
-        set_segmdesc(gdt + 1004, finfo->size + 64 * 1024 - 1,   (int) p, AR_DATA32_RW + 0x60); /* DATA seg + stack */
-        start_app(0, 1003 * 8, finfo->size + 64 * 1024 - 1 /* stack top: ESP */, 1004 * 8, &(task->tss.esp0));
+        set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER + 0x60); /* CODE seg */
+        set_segmdesc(gdt + 1004, data_size - 1,   (int) p, AR_DATA32_RW + 0x60); /* DATA seg */
+        start_app(header.entry, 1003 * 8, data_size - 1 /* stack top: ESP */, 1004 * 8, &(task->tss.esp0));
         memman_free_4k(memman, (int) p, finfo->size);
         cons_newline(cons);
         return 1;
@@ -290,25 +301,59 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 
 int *os_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
-    int cs_base = *((int *) 0xfe8);
+    int ds_base = *((int *) 0xfe8);
     struct TASK *task = task_now();
     struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
+    struct SHTCTL *shtctl = (struct SHTCTL *) *((int *) 0x0fe4);
+    struct SHEET *sht;
+    int *reg = &eax + 1;
+    /* reg[0] : EDI,   reg[1] : ESI,   reg[2] : EBP,   reg[3] : ESP */
+    /* reg[4] : EBX,   reg[5] : EDX,   reg[6] : ECX,   reg[7] : EAX */
     if (edx == 1) {
         cons_putchar(cons, eax & 0xff, 1);
     } else if (edx == 2) {
-        cons_putstr0(cons, (char *) ebx + cs_base);
+        cons_putstr0(cons, (char *) ebx + ds_base);
     } else if (edx == 3) {
-        cons_putstr1(cons, (char *) ebx + cs_base, ecx);
+        cons_putstr1(cons, (char *) ebx + ds_base, ecx);
     } else if (edx == 4) {
         return &(task->tss.esp0);
+    } else if (edx == 5) {
+        sht = sheet_alloc(shtctl);
+        sheet_setbuf(sht, (char *) ebx + ds_base, esi, edi, eax);
+        make_window8((char *) ebx + ds_base, esi, edi, (char *) ecx + ds_base, 0);
+        sheet_slide(sht, 100, 50);
+        sheet_updown(sht, 3);
+        reg[7] = (int) sht;
+    } else if (edx == 6) {
+        sht = (struct SHEET *) ebx;
+        putfonts8_asc(sht->buf, sht->bxsize, esi, edi, eax, (char *) ebp + ds_base);
+        sheet_refresh(sht, esi, edi, esi + ecx * 8, edi + 16);
+    } else if (edx == 7) {
+        sht = (struct SHEET *) ebx;
+        boxfill8(sht->buf, sht->bxsize, ebp, eax, ecx, esi, edi);
+        sheet_refresh(sht, eax, ecx, esi + 1, edi + 1);
     }
     return 0;
+}
+
+int *inthandler0c(int *esp)
+{
+    struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
+    struct TASK *task = task_now();
+    char s[30];
+    cons_putstr0(cons, "\nINT 0C :\n Stack Exception.\n");
+    sprintf(s, "EIP = 0x%x\n", esp[11]);
+    cons_putstr0(cons, s);
+    return &(task->tss.esp0);
 }
 
 int *inthandler0d(int *esp)
 {
     struct CONSOLE *cons = (struct CONSOLE *) *((int *) 0x0fec);
     struct TASK *task = task_now();
+    char s[30];
     cons_putstr0(cons, "\nINT 0D :\n General Protected Exception.\n");
+    sprintf(s, "EIP = 0x%x\n", esp[11]);
+    cons_putstr0(cons, s);
     return &(task->tss.esp0);
 }
