@@ -5,4 +5,6 @@ int strlen(char *);
 int strcmp(char *, char *);
 int strncmp(char *, char *, int);
 void strcpy(char *, char *);
+void srand(int seed);
+int rand();
 #endif

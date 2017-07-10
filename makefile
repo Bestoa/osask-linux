@@ -21,29 +21,34 @@ default: $(target-image)
 
 .PHONY: bootloader
 bootloader:
-	@$(ECHO) " 	[MAKE] 		$@"
+	@$(ECHO) " 	[MAKE] 	$@"
+	@$(MAKE) -C $@
+
+.PHONY: libccommon
+libccommon:
+	@$(ECHO) " 	[MAKE] 	$@"
 	@$(MAKE) -C $@
 
 .PHONY: kernel
-kernel:
-	@$(ECHO) " 	[MAKE] 		$@"
+kernel: libccommon
+	@$(ECHO) " 	[MAKE] 	$@"
 	@$(MAKE) -C $@
 
 .PHONY: app
-app:
-	@$(ECHO) " 	[MAKE] 		$@"
+app: libccommon
+	@$(ECHO) " 	[MAKE] 	$@"
 	@$(MAKE) -C $@
 
 $(empty-image):
 	@$(ECHO) " 	[GENIMAGE] 	$@"
-	@$(DD) if=/dev/zero of=$@ bs=1K count=1440
+	@$(DD) if=/dev/zero of=$@ bs=1K count=1440 > /dev/null 2>&1
 	@$(ECHO) " 	[MKFS.FAT]  $@"
 	@$(RUNASROOT) $(MAKEFAT) $@ > /dev/null
 
 $(target-image): $(empty-image) bootloader kernel app
 	@$(ECHO) " 	[GENIMAGE] 	$@"
 	@$(CP) $(empty-image) $(target-image)
-	@$(DD) if=$(bootloader-target) of=$(target-image) conv=notrunc
+	@$(DD) if=$(bootloader-target) of=$(target-image) conv=notrunc > /dev/null 2>&1
 	@$(MAKEDIR) -p $(tmp-mount-point)
 	@-$(RUNASROOT) $(MOUNT) $(target-image) $(tmp-mount-point)
 	@-$(ECHO) " 	[COPY]  $(kernel-target)"
@@ -56,6 +61,7 @@ $(target-image): $(empty-image) bootloader kernel app
 
 clean:
 	@$(MAKE) -C bootloader clean
+	@$(MAKE) -C libccommon clean
 	@$(MAKE) -C kernel clean
 	@$(MAKE) -C app clean
 	$(RM) -f *.img

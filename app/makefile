@@ -17,15 +17,16 @@ out:
 
 .PHONY: libc
 libc:
-	make -C libc
+	@echo " 	[MAKE] 	$@"
+	@$(MAKE) -C $@
 
 subdirs: out libc $(sub-dir)
-	for d in $(sub-dir); \
+	@for d in $(sub-dir); \
 	do $(MAKE) -C $$d || exit 1; \
 	done
 
 cleansub:
-	for d in $(sub-dir); \
+	@for d in $(sub-dir); \
 	do $(MAKE) -C $$d clean; \
 	done
 

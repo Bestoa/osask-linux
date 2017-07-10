@@ -3,7 +3,7 @@ bootloader-target = ml.bin
 AS = nasm
 
 $(bootloader-target): miniloader.S
-	@echo " 	[AS] 		$@"
+	@echo " 	[AS] 	$@"
 	@$(AS) $< -o $@
 
 clean:

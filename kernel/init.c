@@ -1,5 +1,5 @@
 #include "asmlib/lib.h"
-#include "clib/lib.h"
+#include "libccommon/lib.h"
 #include "graphic.h"
 #include "dsctbl.h"
 #include "int.h"

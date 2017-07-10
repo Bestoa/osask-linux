@@ -6,12 +6,14 @@ target = libc.o
 default: all
 
 %.S.o: %.S
-	nasm -f elf32 $< -o $@
+	@echo " 	[AS] 	$<"
+	@nasm -f elf32 $< -o $@
 
 
 all: $(asm-obj)
-	ld -r $(asm-obj) -o $(target) -m elf_i386
-	cp $(target) ../out
+	@echo " 	[LD] 	$(target)"
+	@ld -r $(asm-obj) -o $(target) -m elf_i386
+	@cp $(target) ../out
 
 clean:
 	rm -rf *.o *.bin *.elf

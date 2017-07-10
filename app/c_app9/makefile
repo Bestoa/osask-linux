@@ -1,11 +1,12 @@
-c-src = hello4.c
+c-src = lines.c
 c-obj = $(c-src:%.c=%.o)
 
-target = hello4
+target = lines
 target-elf = $(target).elf
 target-bin = $(target).bin
 
 extlibs = ../out/libc.o
+extlibs += ../../libccommon/libccommon.o
 
 default: all
 

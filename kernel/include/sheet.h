@@ -1,17 +1,18 @@
 #ifndef __SHEET_H__
 #define __SHEET_H__
 #include "memory.h"
-#define MAX_SHEETS		256
+#define MAX_SHEETS      256
 struct SHEET {
-	unsigned char *buf;
+    unsigned char *buf;
+    int bxsize, bysize, vx0, vy0, col_inv, height, flags;
     struct SHTCTL *ctl;
-	int bxsize, bysize, vx0, vy0, col_inv, height, flags;
+    struct TASK *task;
 };
 struct SHTCTL {
-	unsigned char *vram, *map;
-	int xsize, ysize, top;
-	struct SHEET *sheets[MAX_SHEETS];
-	struct SHEET sheets0[MAX_SHEETS];
+    unsigned char *vram, *map;
+    int xsize, ysize, top;
+    struct SHEET *sheets[MAX_SHEETS];
+    struct SHEET sheets0[MAX_SHEETS];
 };
 struct SHTCTL *shtctl_init(struct MEMMAN *memman, unsigned char *vram, int xsize, int ysize);
 struct SHEET *sheet_alloc(struct SHTCTL *ctl);

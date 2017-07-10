@@ -18,11 +18,13 @@ OBJCOPY = objcopy
 MAKE = make
 
 CFLAGS = -c -m32 -fno-builtin
-CFLAGS += -Iinclude
+CFLAGS += -Iinclude -I..
 CFLAGS += -DSLOWDOWN=10
 
+EXTLIBS = ../libccommon/libccommon.o
+
 $(kernel-target): $(kernel-head-target) $(kernel-tail-target)
-	@echo " 	[GENKERNEL]    $(kernel-target)"
+	@echo " 	[GENKERNEL] 	$(kernel-target)"
 	@cp $(kernel-head-target) $(kernel-target)
 	@cat $(kernel-tail-target) >> $(kernel-target)
 
@@ -39,9 +41,9 @@ $(kernel-head-target): head.S
 	@$(AS) -f elf32 $< -o $@
 
 $(kernel-tail-target): $(c-obj) $(asm-obj)
-	@echo " 	[LD]    $(c-obj) $(asm-obj)"
-	@$(LD) -T kernel.ld $(c-obj) $(asm-obj) -o $(kernel-tail-elf-target)
-	@echo " 	[OBJCOPY] $(kernel-tail-elf-target) -> $(kernel-tail-target)"
+	@echo " 	[LD]    $(kernel-tail-target)"
+	@$(LD) -T kernel.ld $(c-obj) $(asm-obj) $(EXTLIBS) -o $(kernel-tail-elf-target)
+	@echo " 	[OBJCOPY] 		$(kernel-tail-elf-target) -> $(kernel-tail-target)"
 	@$(OBJCOPY) -S -O binary $(kernel-tail-elf-target) $(kernel-tail-target)
 
 font-list = font/font8x16.h
