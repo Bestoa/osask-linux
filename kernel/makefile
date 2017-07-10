@@ -1,5 +1,5 @@
-c-src = init.c
-c-src += $(shell find -not -path "*font*" -not -path "./init.c" -not -path "*test.c" -name "*.c")
+c-src = main.c
+c-src += $(shell find -not -path "*font*" -not -path "./main.c" -name "*.c")
 
 c-obj = $(c-src:%.c=%.o)
 
@@ -19,7 +19,7 @@ MAKE = make
 
 CFLAGS = -c -m32 -fno-builtin
 CFLAGS += -Iinclude -I..
-CFLAGS += -DSLOWDOWN=10
+#CFLAGS += -DSLOWDOWN=10
 
 EXTLIBS = ../libccommon/libccommon.o
 
