@@ -22,7 +22,19 @@ void init_palette(void)
         0x00, 0x84, 0x84,   // 50% cyan
         0x84, 0x84, 0x84    // 50% grey
     };
+    unsigned char table2[216 * 3];
+    int r, g, b;
     set_palette(0, 15, table_rgb);
+    for (b = 0; b < 6; b++) {
+        for (g = 0; g < 6; g++) {
+            for (r = 0; r < 6; r++) {
+                table2[(r + g * 6 + b * 36) * 3 + 0] = r * 51;
+                table2[(r + g * 6 + b * 36) * 3 + 1] = g * 51;
+                table2[(r + g * 6 + b * 36) * 3 + 2] = b * 51;
+            }
+        }
+    }
+    set_palette(16, 231, table2);
     return;
 }
 
