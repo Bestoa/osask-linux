@@ -20,7 +20,7 @@ struct TASK {
     struct FIFO32 fifo;
     struct TSS32 tss;
     struct CONSOLE *cons;
-    int ds_base;
+    int ds_base, cons_stack;
 };
 struct TASKLEVEL {
     int running;        /* Running task number */
@@ -33,6 +33,7 @@ struct TASKCTL {
     struct TASKLEVEL level[MAX_TASKLEVELS];
     struct TASK tasks0[MAX_TASKS];
 };
+extern struct TASKCTL *taskctl;
 extern struct TIMER *task_timer;
 struct TASK *task_now(void);
 struct TASK *task_init(struct MEMMAN *memman);
