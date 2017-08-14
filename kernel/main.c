@@ -59,7 +59,7 @@ void _start(void)
     };
     int key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
     int j, x, y, mmx = -1, mmy = -1, mmx2 = 0;
-    struct SHEET *sht = 0, *key_win;
+    struct SHEET *sht = 0, *key_win, *sht2;
 
     init_gdtidt();
     init_pic();
@@ -211,6 +211,7 @@ void _start(void)
                         task->tss.eax = (int) &(task->tss.esp0);
                         task->tss.eip = (int) asm_end_app;
                         io_sti();
+                        task_run(task, -1, 0);
                     }
                 }
                 if (i == 256 + 0x3c && key_shift != 0) {	/* Shift+F2 */
@@ -280,8 +281,12 @@ void _start(void)
                                                 task->tss.eax = (int) &(task->tss.esp0);
                                                 task->tss.eip = (int) asm_end_app;
                                                 io_sti();
+                                                task_run(task, -1, 0);
                                             } else {
                                                 task = sht->task;
+                                                sheet_updown(sht, -1);
+                                                keywin_off(key_win);
+                                                key_win = shtctl->sheets[shtctl->top - 1];
                                                 io_cli();
                                                 fifo32_put(&task->fifo, 4);
                                                 io_sti();
@@ -310,6 +315,10 @@ void _start(void)
                 close_console(shtctl->sheets0 + (i - 768));
             } else if (1024 <= i && i <= 2023) {
                 close_constask(taskctl->tasks0 + (i - 1024));
+            } else if (2024 <= i && i <= 2279) {
+                sht2 = shtctl->sheets0 + (i - 2024);
+                memman_free_4k(memman, (int) sht2->buf, 256 * 165);
+                sheet_free(sht2);
             }
         }
     }
