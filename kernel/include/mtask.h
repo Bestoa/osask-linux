@@ -23,6 +23,9 @@ struct TASK {
     struct SEGMENT_DESCRIPTOR ldt[2];
     struct CONSOLE *cons;
     int ds_base, cons_stack;
+    struct FILEHANDLE *fhandle;
+    int *fat;
+    char *cmdline;
 };
 struct TASKLEVEL {
     int running;        /* Running task number */
