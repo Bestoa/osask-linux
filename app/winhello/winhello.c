@@ -6,4 +6,5 @@ void main(void)
 {
     int win;
     win = api_openwin(buf, 150, 50, -1, "hello");
+    api_getkey(1);
 }

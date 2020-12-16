@@ -17,4 +17,5 @@ void main(void)
         api_point(win + 1, x, y, 3);
     }
     api_refreshwin(win,  6, 26, 144, 94);
+    api_getkey(1);
 }
